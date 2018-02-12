@@ -8,6 +8,7 @@
     :Field Public ConfigFile←''
     :Field Public Logging←0       ⍝ turn logging on/off
     :Field Public HtmlInterface←1
+    :Field Public HtmlInterfaceWithSelect←1
     :Field Public Debug←0
 
 ⍝ Fields related to running a secure server (to be implemented)
@@ -186,7 +187,8 @@
               CheckRC(rc msg)←7((⎕DMX.(EM,' (',Message,') ')),'occured when validating CodeLocation "',(∊⍕CodeLocation),'"')
           :EndTrap
           CodeLocation←⍎'CodeLocation'#.⎕NS''
-          (rc msg)←CodeLocation LoadFromFolder Folder←folder
+          (rc msg)←CodeLocation LoadFromFolder Folder←folder  
+          CodeLocation.SourceFolder←Folder
       :Else
           CheckRC(rc msg)←5 'CodeLocation is not valid, it should be either a namespace/class reference or a file path'
       :EndSelect
@@ -309,7 +311,7 @@
      
       ExitIf('Could not locate method "',fn,'"')ns.Req.FailIf{0::1 ⋄ 3≠CodeLocation.⎕NC ⍵}fn
      
-      :Trap 0
+      :Trap (~Debug)/0
           payload←{0∊⍴⍵:⍵ ⋄ 0 ⎕JSON ⍵}ns.Req.Body
       :Else
           →0⍴⍨'Could not parse payload as JSON'ns.Req.FailIf 1
@@ -321,7 +323,7 @@
      
       ExitIf('"',fn,'" is not a monadic result-returning function')ns.Req.FailIf 1 1 0≢⊃CodeLocation.⎕AT fn
      
-      :Trap 0
+      :Trap (~Debug)/0
           payload←(CodeLocation⍎fn)payload
       :Else
           ns.Req.Response.JSON←1 ⎕JSON ⎕DMX.(EM Message)
@@ -514,7 +516,17 @@
 ⍝    <table>
 ⍝      <tr>
 ⍝        <td><label for="function">Method to Execute:</label></td>
-⍝        <td><input id="function" name="function" type="text"></td>
+⍝        <td>
+     
+      :If HtmlInterfaceWithSelect
+          r←r,'<select id="function">',(∊{CodeLocation.(1⊃⎕at ⍵)≡1 1 0: '<option value="',⍵,'">',⍵,'</option>' ⋄ ''}¨CodeLocation.⎕NL-3),'</select>'
+      :Else
+          r,←'<input id="function" name="function" type="text">'
+      :EndIf
+     
+     
+      r,←ScriptFollows
+⍝        </td>
 ⍝      </tr>
 ⍝      <tr>
 ⍝        <td><label for="payload">JSON Data:</label></td>
